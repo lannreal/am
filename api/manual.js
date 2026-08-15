@@ -64,31 +64,38 @@ export default async function handler(req, res) {
       let finalData = {};
       
       try {
-        const resp = await fetch(`${BACKEND_BASE}/send`, {
+        const url = `https://api.alwayscodex.my.id/api/am/send?email=${encodeURIComponent(email)}&apikey=mye`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+        
+        if (resp.ok && data.success !== false) {
+          respOk = true;
+          finalData = {
+            status: data.success,
+            message: data.message || data.error,
+            error: data.error,
+            source: "alwayscodex"
+          };
+        } else {
+          // Pass the error message down if it exists, otherwise throw
+          if(data.error) throw new Error(data.error);
+          throw new Error("Primary API returned error");
+        }
+      } catch (err) {
+        console.log("[FALLBACK] Using ThanzV2 API for send due to:", err.message);
+        const fbResp = await fetch(`${BACKEND_BASE}/send`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email })
         });
-        const data = await resp.json();
-        
-        if (resp.ok && data.status !== false) {
-          respOk = true;
-          finalData = data;
-        } else {
-          throw new Error("Primary API returned error");
-        }
-      } catch (err) {
-        console.log("[FALLBACK] Using fallback API for send due to:", err.message);
-        const fbUrl = `https://api.alwayscodex.my.id/api/am/send?email=${encodeURIComponent(email)}&apikey=mye`;
-        const fbResp = await fetch(fbUrl);
         const fbData = await fbResp.json();
         
-        respOk = fbData.success;
+        respOk = fbResp.ok;
         finalData = {
-          status: fbData.success,
-          message: fbData.message || fbData.error,
-          error: fbData.error,
-          source: "fallback"
+          status: fbData.status,
+          message: fbData.message || fbData.error || err.message, // preserve original error if fallback also fails
+          error: fbData.error || err.message,
+          source: "thanzv2-fallback"
         };
       }
       
@@ -102,32 +109,39 @@ export default async function handler(req, res) {
       let finalData = {};
       
       try {
-        const resp = await fetch(`${BACKEND_BASE}/verify`, {
+        const fbUrl = `https://api.alwayscodex.my.id/api/am/verify?email=${encodeURIComponent(email)}&link=${encodeURIComponent(url)}&apikey=mye`;
+        const resp = await fetch(fbUrl);
+        const data = await resp.json();
+        
+        if (resp.ok && data.success !== false) {
+          respOk = true;
+          finalData = {
+            status: data.success,
+            message: data.message || data.error,
+            error: data.error,
+            result: data.success ? { type: 'success' } : null,
+            source: "alwayscodex"
+          };
+        } else {
+          if(data.error) throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+          throw new Error("Primary API returned error");
+        }
+      } catch (err) {
+        console.log("[FALLBACK] Using ThanzV2 API for verif due to:", err.message);
+        const fbResp = await fetch(`${BACKEND_BASE}/verify`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, link: url })
         });
-        const data = await resp.json();
-        
-        if (resp.ok && data.status !== false) {
-          respOk = true;
-          finalData = data;
-        } else {
-          throw new Error("Primary API returned error");
-        }
-      } catch (err) {
-        console.log("[FALLBACK] Using fallback API for verif due to:", err.message);
-        const fbUrl = `https://api.alwayscodex.my.id/api/am/verify?email=${encodeURIComponent(email)}&link=${encodeURIComponent(url)}&apikey=mye`;
-        const fbResp = await fetch(fbUrl);
         const fbData = await fbResp.json();
         
-        respOk = fbData.success;
+        respOk = fbResp.ok;
         finalData = {
-          status: fbData.success,
-          message: fbData.message || fbData.error,
-          error: fbData.error,
-          result: fbData.success ? { type: 'success' } : null,
-          source: "fallback"
+          status: fbData.status,
+          message: fbData.message || fbData.error || err.message,
+          error: fbData.error || err.message,
+          result: fbData.result,
+          source: "thanzv2-fallback"
         };
       }
       
