@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AmPremGenerator — Web Player</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+
+  <style>
+    /* ==========================================================
+       SPOTIFY-LIKE DESIGN SYSTEM (PRO + MOBILE RESPONSIVE)
+       ========================================================== */
+    :root {
+      --bg-base: #000000;
+      --bg-surface: #121212;
+      --bg-elevated: #242424;
+      --bg-highlight: #2a2a2a;
+      
+      --text-main: #ffffff;
+      --text-muted: #b3b3b3;
+      --text-dim: #535353;
+      
+      --spotify-green: #1ed760;
+      --spotify-green-hover: #1fdf64;
+      --spotify-green-press: #169c46;
+      
+      --error-red: #e91429;
+      
+      --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+      
+      --border-radius: 8px;
+      --border-radius-pill: 500px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.2); border-radius: 10px; border: 2px solid var(--bg-surface); }
+    ::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.4); }
+
+    .app-layout {
+      display: flex;
+      flex: 1;
+      height: calc(100dvh - 90px);
+      padding: 8px;
+      gap: 8px;
+      transition: all 0.3s ease;
+    }
+
+    /* ==========================================================
+       ANIMATIONS
+       ========================================================== */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .anim-up {
+      animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+      opacity: 0;
+    }
+    .anim-scale {
+      animation: scaleIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+      opacity: 0;
+    }
+    
+    .d-1 { animation-delay: 0.1s; }
+    .d-2 { animation-delay: 0.2s; }
+    .d-3 { animation-delay: 0.3s; }
+
+    /* ==========================================================
+       SIDEBAR (DESKTOP ONLY)
+       ========================================================== */
+    .sidebar {
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border-radius: var(--border-radius);
+    }
+
+    .sidebar-panel {
+      background: var(--bg-surface);
+      border-radius: var(--border-radius);
+      padding: 16px 12px;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-main);
+      text-decoration: none;
+      padding: 4px 12px;
+      margin-bottom: 20px;
+      transition: transform 0.2s ease;
+    }
+    .brand-wrap:hover { transform: scale(1.02); }
+    .brand-wrap i { font-size: 24px; color: var(--spotify-green); }
+    .brand-wrap h1 { font-size: 16px; font-weight: 700; }
+
+    .nav-menu { display: flex; flex-direction: column; gap: 4px; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 15px;
+      padding: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .nav-item i { font-size: 22px; width: 24px; text-align: center; transition: transform 0.3s; }
+    .nav-item:hover { color: var(--text-main); }
+    .nav-item:active { transform: scale(0.98); }
+    .nav-item.active { color: var(--text-main); }
+    .nav-item.active i { transform: scale(1.1); color: var(--text-main); }
+
+    .library-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 8px 12px;
+    }
+
+    .library-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-muted);
+      padding: 8px;
+      font-weight: 700;
+      font-size: 15px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: color 0.3s;
+    }
+    .library-header:hover { color: var(--text-main); }
+
+    .lib-add-btn {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .lib-add-btn:hover { background-color: var(--bg-highlight); color: var(--text-main); transform: scale(1.1); }
+
+    .vault-list { display: flex; flex-direction: column; gap: 4px; }
+    
+    .vault-item {
+      display: flex; align-items: center; gap: 12px; padding: 8px;
+      border-radius: 6px; cursor: pointer; transition: background-color 0.2s, transform 0.2s;
+    }
+    .vault-item:hover { background-color: var(--bg-highlight); transform: translateX(4px); }
+
+    .vault-item-icon {
+      width: 48px; height: 48px; border-radius: 4px;
+      background: linear-gradient(135deg, #1e3264, #3355a4);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .vault-item-info { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+    .vault-item-title { font-size: 15px; font-weight: 500; color: var(--text-main); margin-bottom: 2px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+    .vault-item-desc { font-size: 13px; color: var(--text-muted); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+
+    /* ==========================================================
+       MAIN VIEW
+       ========================================================== */
+    .main-view {
+      flex: 1;
+      background: var(--bg-surface);
+      border-radius: var(--border-radius);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+    
+    .top-bar {
+      position: sticky; top: 0; height: 64px;
+      background: rgba(18, 18, 18, 0.7); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      z-index: 10; display: flex; align-items: center; padding: 0 24px;
+      transition: background 0.3s;
+    }
+
+    .hero-banner {
+      padding: 32px 24px 24px;
+      background: linear-gradient(transparent 0, rgba(18,18,18,1) 100%), var(--bg-elevated);
+      display: flex; align-items: flex-end; gap: 24px;
+      margin-top: -64px; padding-top: 96px;
+      transition: all 0.3s ease;
+    }
+
+    .hero-icon {
+      width: 192px; height: 192px; border-radius: 8px;
+      background: linear-gradient(135deg, #450af5, #c4efd9);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 84px; color: white;
+      transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .hero-icon:hover { transform: scale(1.05) translateY(-5px); box-shadow: 0 16px 48px rgba(0,0,0,0.7); }
+
+    .hero-text { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .hero-type { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
+    .hero-title { font-size: 64px; font-weight: 900; line-height: 1.1; letter-spacing: -2px; margin: 4px 0 12px; }
+    .hero-desc { font-size: 14px; color: rgba(255,255,255,0.7); font-weight: 500; }
+
+    .content-area {
+      padding: 24px; flex: 1;
+      background: linear-gradient(rgba(0,0,0,0.2) 0, var(--bg-surface) 100%);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Inputs */
+    .input-group { margin-bottom: 24px; width: 100%; max-width: 400px; }
+    .input-label { display: block; font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+    
+    .custom-input, .custom-select {
+      width: 100%; background: var(--bg-elevated); border: 1px solid transparent;
+      color: var(--text-main); font-family: var(--font-ui); font-size: 14px;
+      padding: 14px 18px; border-radius: var(--border-radius-pill); outline: none;
+      transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .custom-input:hover, .custom-select:hover { background: var(--bg-highlight); border-color: rgba(255,255,255,0.2); }
+    .custom-input:focus, .custom-select:focus { border-color: var(--text-dim); background: var(--bg-highlight); box-shadow: 0 0 0 2px rgba(255,255,255,0.1); }
+
+    .custom-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23b3b3b3%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+      background-repeat: no-repeat; background-position: right 18px top 50%; background-size: 10px auto; padding-right: 44px;
+    }
+
+    /* Buttons */
+    .action-row { display: flex; align-items: center; gap: 24px; margin-bottom: 32px; }
+
+    .btn-play {
+      width: 56px; height: 56px; border-radius: 50%;
+      background-color: var(--spotify-green); color: #000; border: none;
+      display: flex; align-items: center; justify-content: center; font-size: 24px;
+      cursor: pointer; transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      box-shadow: 0 8px 16px rgba(29,185,84,0.3);
+    }
+    .btn-play:hover { background-color: var(--spotify-green-hover); transform: scale(1.06); box-shadow: 0 12px 24px rgba(29,185,84,0.4); }
+    .btn-play:active { background-color: var(--spotify-green-press); transform: scale(0.96); }
+    .btn-play:disabled { background-color: var(--text-dim); box-shadow: none; cursor: not-allowed; transform: none; }
+
+    .btn-outline {
+      background: transparent; border: 1px solid var(--text-muted); color: var(--text-main);
+      padding: 12px 28px; border-radius: var(--border-radius-pill); font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); letter-spacing: 0.5px;
+    }
+    .btn-outline:hover { border-color: var(--text-main); transform: scale(1.04); }
+    .btn-outline:active { transform: scale(0.98); }
+
+    /* Cards */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 24px; }
+    .card { background: var(--bg-surface); padding: 16px; border-radius: var(--border-radius); cursor: pointer; transition: background-color 0.3s; position: relative; }
+    .card:hover { background: var(--bg-elevated); }
+    .card-img { width: 100%; aspect-ratio: 1/1; background: linear-gradient(135deg, #1e3264, #3355a4); border-radius: 6px; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; font-size: 48px; color: rgba(255,255,255,0.9); box-shadow: 0 8px 24px rgba(0,0,0,0.5); transition: box-shadow 0.3s; }
+    .card:hover .card-img { box-shadow: 0 12px 32px rgba(0,0,0,0.7); }
+    .card-title { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+    .card-desc { font-size: 14px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    
+    .card-action {
+      position: absolute; bottom: 84px; right: 24px; background-color: var(--spotify-green); color: #000; border: none;
+      width: 48px; height: 48px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 20px; opacity: 0; transform: translateY(12px); transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    }
+    .card:hover .card-action { opacity: 1; transform: translateY(0); }
+    .card-action:hover { background-color: var(--spotify-green-hover); transform: scale(1.08) translateY(0) !important; }
+
+    /* Steps Tracker */
+    .step-list { display: flex; flex-direction: column; gap: 16px; position: relative; }
+    .step-list::before { content: ''; position: absolute; left: 15px; top: 12px; bottom: 12px; width: 2px; background: var(--bg-elevated); z-index: 1; }
+    .step-item { display: flex; align-items: center; gap: 16px; color: var(--text-muted); font-size: 15px; font-weight: 500; transition: all 0.4s ease; position: relative; z-index: 2; }
+    .step-number { width: 32px; height: 32px; border-radius: 50%; background: var(--bg-elevated); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); box-shadow: 0 0 0 4px var(--bg-surface); }
+    
+    .step-item.active { color: var(--text-main); transform: translateX(8px); }
+    .step-item.active .step-number { background: var(--spotify-green); color: #000; box-shadow: 0 0 0 6px rgba(29,185,84,0.2), 0 0 0 4px var(--bg-surface); transform: scale(1.1); }
+    .step-item.done { color: var(--spotify-green); }
+    .step-item.done .step-number { background: var(--bg-highlight); color: var(--spotify-green); }
+
+    /* Radar Animation */
+    .radar-pulse-wrap { position: relative; width: 140px; height: 140px; margin: 32px auto; display: flex; align-items: center; justify-content: center; }
+    .radar-circle { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 2px solid var(--spotify-green); opacity: 0; animation: radarWave 2s cubic-bezier(0.1, 0.8, 0.3, 1) infinite; }
+    .radar-circle:nth-child(2) { animation-delay: 0.6s; }
+    .radar-circle:nth-child(3) { animation-delay: 1.2s; }
+    .radar-center-icon { width: 56px; height: 56px; border-radius: 50%; background: var(--spotify-green); color: #000; display: flex; align-items: center; justify-content: center; font-size: 24px; z-index: 2; box-shadow: 0 0 20px var(--spotify-green); }
+    @keyframes radarWave { 0% { transform: scale(0.3); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
+
+    /* ==========================================================
+       BOTTOM BAR & MOBILE NAV
+       ========================================================== */
+    .now-playing-bar {
+      height: 90px; background-color: var(--bg-base); display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; z-index: 100; transition: all 0.3s ease; position: relative;
+    }
+    
+    .np-left { width: 30%; display: flex; align-items: center; gap: 14px; }
+    .np-cover { width: 56px; height: 56px; border-radius: 4px; background: var(--bg-elevated); display: flex; align-items: center; justify-content: center; color: var(--spotify-green); font-size: 24px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); transition: all 0.3s ease; }
+    .np-info { display: flex; flex-direction: column; justify-content: center; }
+    .np-title { font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 4px; }
+    .np-artist { font-size: 12px; color: var(--text-muted); }
+
+    .np-center { width: 40%; max-width: 722px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .controls-main { display: flex; align-items: center; gap: 20px; color: var(--text-muted); font-size: 14px; }
+    .playback-bar { width: 100%; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .progress-bar-bg { flex: 1; height: 4px; background-color: var(--bg-elevated); border-radius: 2px; position: relative; overflow: hidden; }
+    .progress-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background-color: var(--text-main); width: 0%; border-radius: 2px; transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .progress-bar-bg:hover .progress-bar-fill { background-color: var(--spotify-green); }
+
+    .np-right { width: 30%; display: flex; justify-content: flex-end; align-items: center; }
+    .terminal-toggle { background: transparent; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s; }
+    .terminal-toggle:hover { color: var(--text-main); transform: scale(1.1); background: rgba(255,255,255,0.1); }
+    .terminal-toggle:active { transform: scale(0.9); }
+
+    .mobile-nav { display: none; }
+
+    /* ==========================================================
+       TERMINAL / LOGS DRAWER
+       ========================================================== */
+    .terminal-drawer {
+      position: absolute; bottom: 0; right: 0; width: 420px; height: 380px;
+      background: var(--bg-surface); border-top-left-radius: var(--border-radius);
+      box-shadow: -8px -8px 32px rgba(0,0,0,0.6); display: flex; flex-direction: column;
+      transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); z-index: 10;
+    }
+    .terminal-drawer.open { transform: translateY(0); }
+    .terminal-header { padding: 16px 20px; border-bottom: 1px solid var(--bg-highlight); display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 700; color: var(--text-main); }
+    .terminal-body { flex: 1; padding: 16px; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+    .log-line { display: flex; gap: 12px; line-height: 1.5; word-break: break-all; animation: fadeInUp 0.3s ease forwards; }
+    .log-time { color: var(--text-dim); flex-shrink: 0; }
+    .log-success { color: var(--spotify-green); }
+    .log-error { color: var(--error-red); }
+
+    /* ==========================================================
+       TOAST
+       ========================================================== */
+    .toast {
+      position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%) translateY(20px) scale(0.9);
+      background: #2e77d0; color: #fff; padding: 14px 28px; border-radius: var(--border-radius-pill);
+      font-size: 14px; font-weight: 600; opacity: 0; pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+
+    .mobile-menu-btn { display: none; background: transparent; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; margin-right: 16px; }
+
+    /* ==========================================================
+       MOBILE RESPONSIVENESS
+       ========================================================== */
+    @media (max-width: 768px) {
+      body { overflow: auto; height: auto; }
+      .app-layout { padding: 0; height: auto; display: block; }
+      .main-view { overflow: visible; border-radius: 0; padding-bottom: 80px; }
+      .content-area { padding-bottom: 24px; min-height: auto; }
+      
+      /* Off-canvas Sidebar */
+      .sidebar {
+        position: fixed; top: 0; left: -100%; width: 280px; height: 100dvh;
+        z-index: 1000; background: var(--bg-base); border-radius: 0;
+        transition: left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        display: flex; box-shadow: 4px 0 24px rgba(0,0,0,0.8);
+      }
+      .sidebar.open { left: 0; }
+      .sidebar-overlay {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
+        background: rgba(0,0,0,0.6); z-index: 999; display: none; opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .sidebar-overlay.show { display: block; opacity: 1; }
+
+      .mobile-menu-btn { display: block; }
+      
+      .hero-banner { padding: 64px 20px 24px; flex-direction: column; align-items: center; text-align: center; border-radius: 0; }
+      .hero-icon { width: 140px; height: 140px; font-size: 60px; margin-bottom: 8px; }
+      .hero-title { font-size: 40px; letter-spacing: -1px; margin-bottom: 8px; }
+      .hero-desc { font-size: 13px; }
+      
+      .action-row { justify-content: center; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+      .input-group { max-width: 100%; margin-bottom: 16px; }
+      .card-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+      .card { padding: 12px; }
+      .card-img { margin-bottom: 12px; font-size: 36px; }
+      .card-title { font-size: 14px; }
+      .card-desc { font-size: 12px; }
+      .card-action { bottom: 60px; right: 12px; width: 36px; height: 36px; font-size: 16px; }
+
+      /* Mobile Now Playing Bar */
+      .now-playing-bar { 
+        position: fixed; bottom: 0; width: 100%; height: 60px; 
+        padding: 0 12px; border-top: none; background: rgba(18,18,18,0.98); 
+        box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
+      }
+      .np-left { width: auto; flex: 1; }
+      .np-cover { width: 40px; height: 40px; font-size: 18px; }
+      .np-title { font-size: 13px; }
+      .np-artist { font-size: 11px; }
+      .np-center { display: none; }
+      .np-right { display: none !important; }
+      
+      .mobile-progress-wrapper { position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: var(--bg-elevated); }
+      .mobile-progress-fill { height: 100%; background: var(--text-main); width: 0%; transition: width 0.4s ease; }
+      
+      .terminal-drawer { display: none !important; }
+      .toast { bottom: 80px; }
+    }
+
+    /* ==========================================================
+       POPUP & COPYRIGHT
+       ========================================================== */
+    .popup-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
+      background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+      z-index: 2000; display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+    }
+    .popup-overlay.show { opacity: 1; pointer-events: auto; }
+    
+    .popup-content {
+      background: var(--bg-surface); padding: 32px 24px; border-radius: 16px;
+      width: 90%; max-width: 400px; text-align: center; box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+      border: 1px solid var(--bg-highlight); display: flex; flex-direction: column; gap: 16px;
+    }
+    .popup-icon { font-size: 56px; color: #25D366; }
+    .popup-title { font-size: 20px; font-weight: 800; color: var(--text-main); }
+    .popup-desc { font-size: 14px; color: var(--text-muted); line-height: 1.5; margin-bottom: 8px; }
+    
+    .popup-btn-primary {
+      background: #25D366; color: #000; padding: 14px; border-radius: var(--border-radius-pill);
+      font-weight: 700; font-size: 15px; text-decoration: none; transition: all 0.2s;
+      display: inline-block;
+    }
+    .popup-btn-primary:hover { background: #22bf5b; transform: scale(1.04); }
+    
+    .popup-btn-secondary {
+      background: transparent; color: var(--text-muted); border: none; font-size: 14px; font-weight: 600;
+      cursor: pointer; padding: 10px; transition: color 0.2s;
+    }
+    .popup-btn-secondary:hover { color: var(--text-main); }
+
+    .copyright {
+      text-align: center; font-size: 13px; color: var(--text-dim);
+      padding: 40px 0 20px; font-weight: 500;
+    }
+    .copyright span { color: var(--spotify-green); font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <!-- Welcome Popup -->
+  <div id="welcomePopup" class="popup-overlay">
+    <div class="popup-content anim-scale">
+      <div class="popup-icon"><i class="fa-brands fa-whatsapp"></i></div>
+      <h2 class="popup-title">Welcome to AmPremGenerator!</h2>
+      <p class="popup-desc">Jangan lupa gabung ke channel WhatsApp resmi kita buat info update terbaru dan akun gratis lainnya ya guys!</p>
+      <a href="https://whatsapp.com/channel/0029VbDGAZP4CrfpSmRVml1Q" target="_blank" class="popup-btn-primary" onclick="closePopup()">Join Channel Resmi</a>
+      <button class="popup-btn-secondary" onclick="closePopup()">Nanti aja</button>
+    </div>
+  </div>
+
+  <!-- Mobile Sidebar Overlay -->
+  <div id="mobileOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <!-- App Layout Area -->
+  <div class="app-layout">
+    
+    <!-- Sidebar (Desktop) -->
+    <aside class="sidebar anim-up d-1">
+      <div class="sidebar-panel">
+        <a href="#" class="brand-wrap">
+          <i class="fa-brands fa-spotify"></i>
+          <h1>AmPremGenerator</h1>
+        </a>
+        <nav class="nav-menu">
+          <div class="nav-item active" onclick="switchTab('tab-auto', this, 'nav-auto')">
+            <i class="fa-solid fa-house"></i> Home
+          </div>
+          <div class="nav-item" onclick="switchTab('tab-catcher', this, 'nav-catcher')">
+            <i class="fa-solid fa-magnifying-glass"></i> Search (Live)
+          </div>
+        </nav>
+      </div>
+
+      <div class="sidebar-panel library-panel">
+        <div class="library-header">
+          <div style="display:flex; align-items:center; gap:12px; cursor: pointer;" onclick="switchTab('tab-vault', document.getElementById('nav-vault-desk'), 'nav-vault')">
+            <i class="fa-solid fa-book-bookmark"></i> Your Vault
+          </div>
+          <div class="lib-add-btn" title="Create Custom Playlist (Manual)" onclick="switchTab('tab-manual', document.getElementById('nav-manual-desk'), 'nav-manual')">
+            <i class="fa-solid fa-plus"></i>
+          </div>
+        </div>
+        
+        <div id="nav-vault-desk" class="nav-item" style="display:none;"></div>
+        <div id="nav-manual-desk" class="nav-item" style="display:none;"></div>
+
+        <div id="sidebarVaultList" class="vault-list"></div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-view anim-scale d-2">
+      <div class="top-bar">
+        <button id="mobileMenuBtn" class="mobile-menu-btn" onclick="toggleSidebar()">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+
+      <!-- TAB 1: AUTO GENERATOR -->
+      <div id="tab-auto" class="tab-content active">
+        <div class="hero-banner anim-up">
+          <div class="hero-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+          <div class="hero-text">
+            <span class="hero-type">Public Playlist</span>
+            <h1 class="hero-title">Auto Generator</h1>
+            <p class="hero-desc">1-Click Pro Account Creator. Secure serverless proxy bypass.</p>
+          </div>
+        </div>
+
+        <div class="content-area">
+          <div class="action-row anim-up d-1">
+            <button id="btnStartAuto" class="btn-play" onclick="startAutoGeneration()" title="Play">
+              <i class="fa-solid fa-play"></i>
+            </button>
+            <div class="input-group" style="margin:0;">
+              <select id="autoBatchCount" class="custom-select" style="font-weight: 600;">
+                <option value="1">1 Account (Fast)</option>
+                <option value="3">3 Accounts Batch</option>
+                <option value="5">5 Accounts Mass</option>
+              </select>
+            </div>
+          </div>
+
+          <h2 class="anim-up d-2" style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Generation Tracklist</h2>
+          <div class="step-list anim-up d-3">
+            <div class="step-item" id="step1"><div class="step-number">1</div> Alokasi Mailbox Tempmail</div>
+            <div class="step-item" id="step2"><div class="step-number">2</div> Permintaan Magic Link ke Server</div>
+            <div class="step-item" id="step3"><div class="step-number">3</div> Menangkap Email & Ekstrak Link</div>
+            <div class="step-item" id="step4"><div class="step-number">4</div> Aktivasi Lisensi Pro ke Backend</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: HP LOGIN CATCHER -->
+      <div id="tab-catcher" class="tab-content">
+        <div class="hero-banner" style="background: linear-gradient(transparent 0, rgba(18,18,18,1) 100%), #1e3264;">
+          <div class="hero-icon" style="background: linear-gradient(135deg, #1e3264, #3355a4);"><i class="fa-solid fa-mobile-screen"></i></div>
+          <div class="hero-text">
+            <span class="hero-type">Live Event</span>
+            <h1 class="hero-title">Login Catcher</h1>
+            <p class="hero-desc">Tangkap tautan masuk dari aplikasi HP secara real-time.</p>
+          </div>
+        </div>
+
+        <div class="content-area">
+          <div class="action-row anim-up">
+            <button id="btnStartListen" class="btn-play" onclick="startLoginCatcher()" title="Start Listening">
+              <i class="fa-solid fa-satellite-dish"></i>
+            </button>
+            <div class="input-group" style="margin:0;">
+              <select id="catcherAccountSelect" class="custom-select" style="font-weight: 600;">
+                <option value="">Select Account from Vault</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="catcherStatusBox" style="display:none;" class="anim-scale">
+            <div class="radar-pulse-wrap">
+              <div class="radar-circle"></div><div class="radar-circle"></div><div class="radar-circle"></div>
+              <div class="radar-center-icon"><i class="fa-solid fa-tower-broadcast"></i></div>
+            </div>
+            <p style="text-align:center; color:var(--text-muted); font-size:15px; margin-bottom:16px;">
+              Listening for link to <strong id="targetEmailLabel" style="color:#fff;"></strong>...<br>
+              Input this email on your phone and press "Send Login Link".
+            </p>
+          </div>
+
+          <div id="catcherResultArea" class="result-box anim-up" style="display:none;">
+            <div style="font-weight:700; color:var(--spotify-green); margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+              <i class="fa-solid fa-circle-check"></i> Login Link Captured!
+            </div>
+            <a id="btnOpenLink" href="#" target="_blank"></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: VAULT / LIBRARY -->
+      <div id="tab-vault" class="tab-content">
+        <div class="hero-banner" style="background: linear-gradient(transparent 0, rgba(18,18,18,1) 100%), #5038a0;">
+          <div class="hero-icon" style="background: linear-gradient(135deg, #5038a0, #8a6be8);"><i class="fa-solid fa-database"></i></div>
+          <div class="hero-text">
+            <span class="hero-type">Your Library</span>
+            <h1 class="hero-title">Pro Vault</h1>
+            <p class="hero-desc">Koleksi akun Alight Motion Pro yang berhasil dibuat.</p>
+          </div>
+        </div>
+
+        <div class="content-area">
+          <div class="action-row anim-up">
+            <button class="btn-play" onclick="exportAccounts()" title="Download TXT">
+              <i class="fa-solid fa-arrow-down"></i>
+            </button>
+            <span style="color:var(--text-muted); font-size:14px; font-weight:600;" id="vaultCountLabel">0 Accounts</span>
+          </div>
+
+          <div id="mainVaultGrid" class="card-grid anim-up d-1"></div>
+        </div>
+      </div>
+
+      <!-- TAB 4: MANUAL -->
+      <div id="tab-manual" class="tab-content">
+        <div class="hero-banner" style="background: linear-gradient(transparent 0, rgba(18,18,18,1) 100%), #a53221;">
+          <div class="hero-icon" style="background: linear-gradient(135deg, #a53221, #e34c38);"><i class="fa-solid fa-user-check"></i></div>
+          <div class="hero-text">
+            <span class="hero-type">Custom Upload</span>
+            <h1 class="hero-title">Manual Auth</h1>
+            <p class="hero-desc">Ubah email pribadi (Gmail/Yahoo/dll) Anda menjadi Pro.</p>
+          </div>
+        </div>
+
+        <div class="content-area">
+          <div style="max-width: 500px;" class="anim-up">
+            <div class="input-group">
+              <label class="input-label">1. Alamat Email Pribadi</label>
+              <input type="email" id="manualEmailInput" placeholder="email.anda@gmail.com" class="custom-input" />
+            </div>
+            <button class="btn-outline" style="margin-bottom: 40px;" onclick="sendManualMagicLink()" id="btnSendManual">
+              Send Magic Link
+            </button>
+
+            <div class="input-group">
+              <label class="input-label">2. Tautan Verifikasi dari Email</label>
+              <input type="text" id="manualUrlInput" placeholder="https://alight-creative.firebaseapp.com/..." class="custom-input" />
+            </div>
+            <button class="btn-outline" style="border-color: var(--spotify-green); color: var(--spotify-green);" onclick="verifyManualLink()" id="btnVerifyManual">
+              Activate License
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Terminal Drawer -->
+      <div id="terminalDrawer" class="terminal-drawer">
+        <div class="terminal-header">
+          <span>Server Terminal</span>
+          <div class="lib-add-btn" style="width:28px; height:28px;" onclick="toggleTerminal()">
+            <i class="fa-solid fa-xmark"></i>
+          </div>
+        </div>
+        <div id="autoTerminal" class="terminal-body">
+          <div class="log-line"><span class="log-time">[System]</span> <span>Secure connection established.</span></div>
+        </div>
+      </div>
+      <div class="copyright">
+        © 2026 AmPremGenerator. Crafted by <span>lann</span>.
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Now Playing Bar -->
+  <footer class="now-playing-bar anim-up d-3">
+    <div class="mobile-progress-wrapper d-md-none">
+      <div id="mobileProgressFill" class="mobile-progress-fill"></div>
+    </div>
+    
+    <div class="np-left">
+      <div class="np-cover" id="npCoverBox"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+      <div class="np-info">
+        <div class="np-title" id="statusTitle">Idle</div>
+        <div class="np-artist">AmPrem Engine</div>
+      </div>
+    </div>
+    
+    <div class="np-center">
+      <div class="controls-main">
+        <span id="stepIcon1"><i class="fa-solid fa-circle" style="font-size:10px;"></i></span>
+        <span id="stepIcon2"><i class="fa-solid fa-circle" style="font-size:10px;"></i></span>
+        <span id="stepIcon3"><i class="fa-solid fa-circle" style="font-size:10px;"></i></span>
+        <span id="stepIcon4"><i class="fa-solid fa-circle" style="font-size:10px;"></i></span>
+      </div>
+      <div class="playback-bar">
+        <span id="progressTime">0:00</span>
+        <div class="progress-bar-bg">
+          <div id="progressBarFill" class="progress-bar-fill"></div>
+        </div>
+        <span id="progressPercentTxt">0%</span>
+      </div>
+    </div>
+    
+    <div class="np-right">
+      <button class="terminal-toggle" onclick="toggleTerminal()" title="Toggle Logs Drawer">
+        <i class="fa-solid fa-bars-staggered"></i>
+      </button>
+    </div>
+  </footer>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">
+    <i class="fa-solid fa-circle-info"></i> <span id="toastMsg">Notifikasi</span>
+  </div>
+
+  <script>
+    /* ==========================================================
+       SECURE CLIENT ENGINE
+       ========================================================== */
+    const VAULT_KEY = "am_pro_vault_v3";
+
+    function getVault() { try { return JSON.parse(localStorage.getItem(VAULT_KEY)) || []; } catch { return []; } }
+    function saveVault(items) { try { localStorage.setItem(VAULT_KEY, JSON.stringify(items)); updateVaultUI(); } catch {} }
+
+    function addToVault(acc) {
+      const v = getVault();
+      if (!v.some(a => a.email === acc.email)) { v.unshift(acc); saveVault(v); }
+    }
+
+    function removeAccount(email) {
+      if (confirm(`Remove account ${email} from vault?`)) {
+        saveVault(getVault().filter(a => a.email !== email));
+        showToast("Account removed");
+      }
+    }
+
+    /* UI State & Navigation */
+    function switchTab(tabId, deskNavElement, mobileNavId) {
+      // Re-trigger animations
+      const contents = document.querySelectorAll('.tab-content');
+      contents.forEach(sec => sec.classList.remove('active'));
+      
+      const target = document.getElementById(tabId);
+      target.classList.add('active');
+      
+      // Desktop Nav active state
+      if(deskNavElement) {
+        document.querySelectorAll('.sidebar .nav-item').forEach(el => el.classList.remove('active'));
+        deskNavElement.classList.add('active');
+      }
+
+      // Close sidebar if on mobile
+      if (window.innerWidth <= 768) {
+        document.querySelector('.sidebar').classList.remove('open');
+        const overlay = document.getElementById('mobileOverlay');
+        if (overlay) overlay.classList.remove('show');
+      }
+
+      document.querySelector('.main-view').scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleSidebar() {
+      document.querySelector('.sidebar').classList.toggle('open');
+      const overlay = document.getElementById('mobileOverlay');
+      if (overlay) overlay.classList.toggle('show');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    function toggleTerminal() { document.getElementById('terminalDrawer').classList.toggle('open'); }
+
+    /* Terminal Logger & Progress Tracker */
+    function logTerm(type, msg) {
+      const term = document.getElementById('autoTerminal');
+      const time = new Date().toLocaleTimeString('id-ID', { hour12: false });
+      const line = document.createElement('div');
+      line.className = `log-line log-${type}`;
+      line.innerHTML = `<span class="log-time">[${time}]</span> <span>${msg}</span>`;
+      term.appendChild(line);
+      term.scrollTop = term.scrollHeight;
+    }
+
+    function updateStepUI(stepNum, status) {
+      const stepEl = document.getElementById(`step${stepNum}`);
+      if (stepEl) {
+        const numEl = stepEl.querySelector('.step-number');
+        if (status === 'active') {
+          stepEl.classList.add('active'); stepEl.classList.remove('done');
+          numEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+        } else if (status === 'done') {
+          stepEl.classList.remove('active'); stepEl.classList.add('done');
+          numEl.innerHTML = `<i class="fa-solid fa-check"></i>`;
+        } else {
+          stepEl.classList.remove('active', 'done');
+          numEl.innerHTML = stepNum;
+        }
+      }
+
+      const iconEl = document.getElementById(`stepIcon${stepNum}`);
+      if (iconEl) {
+        if (status === 'active') {
+          iconEl.style.color = 'var(--text-main)'; iconEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+        } else if (status === 'done') {
+          iconEl.style.color = 'var(--spotify-green)'; iconEl.innerHTML = `<i class="fa-solid fa-circle"></i>`;
+        } else {
+          iconEl.style.color = 'var(--text-muted)'; iconEl.innerHTML = `<i class="fa-solid fa-circle" style="font-size:10px;"></i>`;
+        }
+      }
+    }
+
+    function setProgressBar(percent, title) {
+      // Desktop
+      document.getElementById('progressBarFill').style.width = `${percent}%`;
+      document.getElementById('progressPercentTxt').textContent = `${percent}%`;
+      // Mobile
+      document.getElementById('mobileProgressFill').style.width = `${percent}%`;
+
+      if (title) document.getElementById('statusTitle').textContent = title;
+      
+      const coverBox = document.getElementById('npCoverBox');
+      if (percent > 0 && percent < 100) {
+        coverBox.innerHTML = `<i class="fa-solid fa-compact-disc fa-spin"></i>`;
+        coverBox.style.color = '#fff';
+      } else if (percent === 100) {
+        coverBox.innerHTML = `<i class="fa-solid fa-check"></i>`;
+        coverBox.style.color = 'var(--spotify-green)';
+      } else {
+        coverBox.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i>`;
+        coverBox.style.color = 'var(--spotify-green)';
+      }
+    }
+
+    function resetProgress() {
+      for(let i=1; i<=4; i++) updateStepUI(i, 'reset');
+      setProgressBar(0, 'Idle');
+    }
+
+    /* ==========================================================
+       1. AUTO GENERATOR
+       ========================================================== */
+    let isAutoRunning = false;
+
+    async function startAutoGeneration() {
+      if (isAutoRunning) return;
+      isAutoRunning = true;
+
+      const btn = document.getElementById('btnStartAuto');
+      const count = parseInt(document.getElementById('autoBatchCount').value) || 1;
+      
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-pause"></i>`;
+      
+      if(window.innerWidth > 768) document.getElementById('terminalDrawer').classList.add('open');
+      logTerm('info', `Starting batch generation: ${count} accounts...`);
+
+      let successCount = 0;
+
+      for (let i = 1; i <= count; i++) {
+        resetProgress();
+        setProgressBar(20, `Track [${i}/${count}] Playing...`);
+        updateStepUI(1, 'active');
+        logTerm('info', `--- Processing Account #${i}/${count} ---`);
+
+        try {
+          const resp = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-am-pro-signature': 'vault-v3' }, body: JSON.stringify({}) });
+          updateStepUI(1, 'done'); updateStepUI(2, 'active'); updateStepUI(3, 'active');
+
+          const data = await resp.json();
+
+          if (resp.ok && data.status && data.account) {
+            updateStepUI(2, 'done'); updateStepUI(3, 'done'); updateStepUI(4, 'done');
+            setProgressBar(100, `Track [${i}/${count}] Completed`);
+            logTerm('success', `✓ SUCCESS! Account: ${data.account.email}`);
+            addToVault(data.account);
+            successCount++;
+          } else {
+            throw new Error(data.error || data.message || 'Generation failed');
+          }
+        } catch (err) {
+          updateStepUI(4, 'reset');
+          logTerm('error', `✗ Error: ${err.message}`);
+        }
+        if (i < count) await new Promise(r => setTimeout(r, 1000));
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-play"></i>`;
+      isAutoRunning = false;
+      setProgressBar(100, 'Playlist Finished');
+      setTimeout(resetProgress, 4000);
+
+      logTerm('success', `=== DONE: ${successCount}/${count} Accounts Saved ===`);
+      showToast(`Added ${successCount} accounts to Your Library`);
+    }
+
+    /* ==========================================================
+       2. LOGIN CATCHER
+       ========================================================== */
+    let catcherTimer = null;
+
+    async function startLoginCatcher() {
+      const email = document.getElementById('catcherAccountSelect').value;
+      if (!email) return showToast('Select an account from Vault first');
+
+      const target = getVault().find(a => a.email === email);
+      if (!target || !target.sid) return showToast('Invalid session for this account');
+
+      const statusBox = document.getElementById('catcherStatusBox');
+      const resArea = document.getElementById('catcherResultArea');
+      const btn = document.getElementById('btnStartListen');
+
+      statusBox.style.display = 'block'; resArea.style.display = 'none';
+      document.getElementById('targetEmailLabel').textContent = email;
+      btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+      document.getElementById('statusTitle').textContent = 'Listening for Login...';
+
+      try {
+        const initResp = await fetch('/api/catcher', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-am-pro-signature': 'vault-v3' }, body: JSON.stringify({ sid: target.sid }) });
+        const ignoreIds = (await initResp.json()).currentIds || [];
+        showToast('📡 Standby: Send login link from app');
+
+        let attempts = 0;
+        if (catcherTimer) clearInterval(catcherTimer);
+
+        catcherTimer = setInterval(async () => {
+          attempts++;
+          try {
+            const resp = await fetch('/api/catcher', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-am-pro-signature': 'vault-v3' }, body: JSON.stringify({ sid: target.sid, ignoreIds: ignoreIds }) });
+            const data = await resp.json();
+
+            if (data.status && data.found && data.link) {
+              clearInterval(catcherTimer);
+              const linkA = document.getElementById('btnOpenLink');
+              linkA.textContent = data.link; linkA.href = data.link;
+              statusBox.style.display = 'none'; resArea.style.display = 'block';
+              btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-satellite-dish"></i>`;
+              document.getElementById('statusTitle').textContent = 'Login Captured!';
+              showToast('Link captured successfully!');
+              return;
+            }
+          } catch (e) {}
+
+          if (attempts > 60) {
+            clearInterval(catcherTimer); btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-satellite-dish"></i>`;
+            document.getElementById('statusTitle').textContent = 'Idle';
+            showToast('Listen timeout. Try again.'); statusBox.style.display = 'none';
+          }
+        }, 2500);
+      } catch (err) {
+        showToast(err.message); btn.disabled = false; btn.innerHTML = `<i class="fa-solid fa-satellite-dish"></i>`;
+        statusBox.style.display = 'none';
+      }
+    }
+
+    /* ==========================================================
+       3. VAULT MANAGEMENT
+       ========================================================== */
+    function updateVaultUI() {
+      const vault = getVault();
+      document.getElementById('vaultCountLabel').textContent = `${vault.length} Accounts`;
+      
+      const select = document.getElementById('catcherAccountSelect');
+      select.innerHTML = '<option value="">Select Account from Vault</option>';
+      
+      const sideList = document.getElementById('sidebarVaultList');
+      sideList.innerHTML = '';
+      
+      const mainGrid = document.getElementById('mainVaultGrid');
+      
+      if (!vault.length) {
+        mainGrid.innerHTML = `<p style="color:var(--text-muted); font-weight:500;">Your Library is empty. Generate some accounts first.</p>`;
+        return;
+      }
+      mainGrid.innerHTML = '';
+
+      vault.forEach((acc, i) => {
+        const opt = document.createElement('option');
+        opt.value = acc.email; opt.textContent = acc.email;
+        select.appendChild(opt);
+
+        const sideItem = document.createElement('div');
+        sideItem.className = 'vault-item';
+        sideItem.innerHTML = `
+          <div class="vault-item-icon" style="width:40px; height:40px; font-size:16px;"><i class="fa-solid fa-bolt"></i></div>
+          <div class="vault-item-info">
+            <span class="vault-item-title">${acc.email.split('@')[0]}</span>
+            <span class="vault-item-desc">Pro • ${acc.created_at || 'Just now'}</span>
+          </div>
+        `;
+        sideItem.onclick = () => { navigator.clipboard.writeText(acc.email); showToast("Email copied to clipboard"); };
+        sideList.appendChild(sideItem);
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="card-img"><i class="fa-solid fa-bolt"></i></div>
+          <div class="card-title">${acc.email.split('@')[0]}</div>
+          <div class="card-desc">Pro Account • ${acc.created_at || 'Just now'}</div>
+          <button class="card-action" onclick="event.stopPropagation(); removeAccount('${acc.email}')" title="Delete"><i class="fa-solid fa-trash" style="font-size:16px;"></i></button>
+        `;
+        card.onclick = () => { navigator.clipboard.writeText(acc.email); showToast("Email copied to clipboard"); };
+        mainGrid.appendChild(card);
+      });
+    }
+
+    function exportAccounts() {
+      const vault = getVault();
+      if (!vault.length) return showToast('Vault is empty');
+      let content = "=== AmPremGenerator ACCOUNTS ===\n\n";
+      vault.forEach((a, i) => { content += `[${i+1}] EMAIL: ${a.email}\n    TIME: ${a.created_at || '-'}\n\n`; });
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
+      link.download = `am_accounts_${Date.now()}.txt`; link.click();
+      showToast('Export downloaded successfully');
+    }
+
+    /* ==========================================================
+       4. MANUAL AUTH
+       ========================================================== */
+    async function sendManualMagicLink() {
+      const email = document.getElementById('manualEmailInput').value.trim();
+      if (!email || !email.includes('@')) return showToast('Invalid email address');
+
+      const btn = document.getElementById('btnSendManual');
+      btn.disabled = true; btn.textContent = `Sending...`;
+
+      try {
+        const res = await fetch('/api/manual', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-am-pro-signature': 'vault-v3' }, body: JSON.stringify({ action: 'send', email: email }) });
+        const data = await res.json();
+        if (res.ok && data.status) showToast('Magic link sent! Check your inbox.');
+        else showToast(data.error || 'Failed to send link');
+      } catch (e) { showToast('Server connection failed'); } 
+      finally { btn.disabled = false; btn.textContent = `Send Magic Link`; }
+    }
+
+    async function verifyManualLink() {
+      const email = document.getElementById('manualEmailInput').value.trim();
+      const link = document.getElementById('manualUrlInput').value.trim();
+      if (!email || !link) return showToast('Fill email and verification link');
+
+      const btn = document.getElementById('btnVerifyManual');
+      btn.disabled = true; btn.textContent = `Verifying...`;
+
+      try {
+        const res = await fetch('/api/manual', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-am-pro-signature': 'vault-v3' }, body: JSON.stringify({ action: 'verif', email: email, url: link }) });
+        const data = await res.json();
+        if (res.ok && data.status) {
+          showToast('Account activated to Pro!');
+          addToVault({ email: email, created_at: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) });
+          document.getElementById('manualUrlInput').value = '';
+        } else showToast(data.error || 'Verification failed');
+      } catch (e) { showToast('Server connection failed'); } 
+      finally { btn.disabled = false; btn.textContent = `Activate License`; }
+    }
+
+    function closePopup() {
+      document.getElementById('welcomePopup').classList.remove('show');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => { 
+      updateVaultUI(); 
+      setTimeout(() => {
+        document.getElementById('welcomePopup').classList.add('show');
+      }, 800);
+    });
+  </script>
+</body>
+</html>

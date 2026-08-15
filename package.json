@@ -1,0 +1,17 @@
+{
+  "name": "am-pro-studio",
+  "version": "2.0.0",
+  "description": "AM Pro Studio with Secure Zero-Leak Backend Proxy",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["alight-motion", "proxy", "automation"],
+  "author": "Thanz",
+  "license": "MIT"
+}
