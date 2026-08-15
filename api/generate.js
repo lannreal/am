@@ -1,9 +1,7 @@
 // Serverless Endpoint: POST /api/generate
 // 100% Server-Side Execution (API Key & Endpoints are completely hidden)
 
-const BACKEND_BASE = process.env.AM_BACKEND_URL || "https://restapidhan.vercel.app/api/am";
-const API_KEY = process.env.AM_API_KEY || "freeapikeydhan26";
-const GUERRILLA_BASE = "https://api.guerrillamail.com/ajax.php";
+const BACKEND_BASE = process.env.AM_BACKEND_URL || "https://secret-member-thanzv2.vercel.app/api";
 
 export default async function handler(req, res) {
   // --- VERCEL SECURITY (ANTI-SCRAPING) ---
@@ -29,76 +27,35 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Alokasi Mailbox Tempmail di Server
-    const initRes = await fetch(`${GUERRILLA_BASE}?f=get_email_address`);
-    const initData = await initRes.json();
-    
-    if (!initData.email_addr || !initData.sid_token) {
-      return res.status(500).json({ status: false, error: "Gagal mengalokasikan tempmail" });
-    }
+    // 1. Generate Akun Pro via ThanzV2 Bulk Engine
+    const bulkRes = await fetch(`${BACKEND_BASE}/bulk`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: 1 })
+    });
 
-    const email = initData.email_addr;
-    const sid = initData.sid_token;
+    const bulkData = await bulkRes.json();
 
-    // 2. Kirim Magic Link ke Backend AM
-    const sendUrl = `${BACKEND_BASE}?action=send&apikey=${API_KEY}&email=${encodeURIComponent(email)}`;
-    const sendRes = await fetch(sendUrl);
-    const sendData = await sendRes.json();
-
-    if (!sendData.status) {
-      return res.status(500).json({ status: false, error: sendData.error || sendData.message || "Gagal mengirim link AM" });
-    }
-
-    // 3. Polling Email Masuk di Sisi Server
-    let verifLink = null;
-    for (let i = 0; i < 14; i++) {
-      await new Promise(r => setTimeout(r, 2200));
-      const checkRes = await fetch(`${GUERRILLA_BASE}?f=check_email&seq=0&sid_token=${sid}`);
-      const checkData = await checkRes.json();
-      const list = checkData.list || [];
-
-      for (const m of list) {
-        if (m.mail_from !== "no-reply@guerrillamail.com") {
-          const fetchRes = await fetch(`${GUERRILLA_BASE}?f=fetch_email&email_id=${m.mail_id}&sid_token=${sid}`);
-          const fetchData = await fetchRes.json();
-          const body = fetchData.mail_body || "";
-
-          const match = body.match(/href=["'](https:\/\/alight[^"'>\s]+)/) ||
-                        body.match(/(https:\/\/alight-creative\.firebaseapp\.com\/[^"'>\s]+)/) ||
-                        body.match(/href=["'](https:\/\/[^"'>\s]+)/);
-          if (match) {
-            verifLink = match[1].replace(/&amp;/g, "&");
-            break;
-          }
-        }
-      }
-      if (verifLink) break;
-    }
-
-    if (!verifLink) {
-      return res.status(408).json({ status: false, error: "Timeout: Email verifikasi tidak masuk tepat waktu" });
-    }
-
-    // 4. Verifikasi Lisensi Pro ke Backend
-    const verifUrl = `${BACKEND_BASE}?action=verif&apikey=${API_KEY}&email=${encodeURIComponent(email)}&url=${encodeURIComponent(verifLink)}`;
-    const verifRes = await fetch(verifUrl);
-    const verifData = await verifRes.json();
-
-    if (verifData.status) {
+    if (bulkRes.ok && bulkData.status && bulkData.result && bulkData.result.accounts && bulkData.result.accounts.length > 0) {
+      const acc = bulkData.result.accounts[0];
       return res.status(200).json({
         status: true,
         message: "Akun Pro Berhasil Dibuat & Aktif",
         account: {
-          email: email,
-          sid: sid,
+          email: acc.email,
+          package: acc.package || "PRO_1_YEAR",
+          duration: acc.duration || "1_year",
+          sid: acc.email, // gunakan email sebagai identifier
           created_at: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
         }
       });
     } else {
-      return res.status(500).json({ status: false, error: verifData.error || verifData.message || "Gagal verifikasi lisensi" });
+      return res.status(500).json({ 
+        status: false, 
+        error: bulkData.message || (bulkData.error && bulkData.error.message) || "Gagal membuat akun dari server pusat" 
+      });
     }
-
   } catch (err) {
-    return res.status(500).json({ status: false, error: err.message });
+    return res.status(500).json({ status: false, error: err.message || "Internal server error" });
   }
 }

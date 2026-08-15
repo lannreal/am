@@ -28,9 +28,33 @@ export default async function handler(req, res) {
   try {
     const { sid, ignoreIds = [] } = req.body || {};
     if (!sid) {
-      return res.status(400).json({ status: false, error: "Session ID (sid) wajib disertakan" });
+      return res.status(400).json({ status: false, error: "Session ID atau Email wajib disertakan" });
     }
 
+    // 1. Cek Inbox via ThanzV2 jika sid berupa email
+    if (sid.includes('@')) {
+      try {
+        const inboxRes = await fetch("https://secret-member-thanzv2.vercel.app/api/inbox", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: sid })
+        });
+        const inboxData = await inboxRes.json();
+        if (inboxData.status && inboxData.data && inboxData.data.messages && inboxData.data.messages.length > 0) {
+          const lastMsg = inboxData.data.messages[inboxData.data.messages.length - 1];
+          if (lastMsg.login_url) {
+            return res.status(200).json({
+              status: true,
+              found: true,
+              link: lastMsg.login_url,
+              mail_id: lastMsg.subject || "inbox-1"
+            });
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 2. Fallback: Cek Guerrilla Mail jika sid adalah sid_token
     const checkRes = await fetch(`${GUERRILLA_BASE}?f=check_email&seq=0&sid_token=${sid}`);
     const checkData = await checkRes.json();
     const list = checkData.list || [];

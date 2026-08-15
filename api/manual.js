@@ -1,8 +1,7 @@
 // Serverless Endpoint: POST /api/manual
 // Proxy untuk mengirim dan memverifikasi email pribadi kustom
 
-const BACKEND_BASE = process.env.AM_BACKEND_URL || "https://restapidhan.vercel.app/api/am";
-const API_KEY = process.env.AM_API_KEY || "freeapikeydhan26";
+const BACKEND_BASE = process.env.AM_BACKEND_URL || "https://secret-member-thanzv2.vercel.app/api";
 
 export default async function handler(req, res) {
   // --- VERCEL SECURITY (ANTI-SCRAPING) ---
@@ -31,18 +30,24 @@ export default async function handler(req, res) {
 
     if (action === "send") {
       if (!email) return res.status(400).json({ status: false, error: "Email wajib diisi" });
-      const targetUrl = `${BACKEND_BASE}?action=send&apikey=${API_KEY}&email=${encodeURIComponent(email)}`;
-      const resp = await fetch(targetUrl);
+      const resp = await fetch(`${BACKEND_BASE}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
       const data = await resp.json();
-      return res.status(resp.ok ? 200 : 400).json(data);
+      return res.status(resp.ok && data.status !== false ? 200 : 400).json(data);
     } 
     
     else if (action === "verif") {
       if (!email || !url) return res.status(400).json({ status: false, error: "Email dan Link URL wajib diisi" });
-      const targetUrl = `${BACKEND_BASE}?action=verif&apikey=${API_KEY}&email=${encodeURIComponent(email)}&url=${encodeURIComponent(url)}`;
-      const resp = await fetch(targetUrl);
+      const resp = await fetch(`${BACKEND_BASE}/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, link: url })
+      });
       const data = await resp.json();
-      return res.status(resp.ok ? 200 : 400).json(data);
+      return res.status(resp.ok && data.status !== false ? 200 : 400).json(data);
     }
 
     else {
