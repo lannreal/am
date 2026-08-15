@@ -89,19 +89,19 @@ function isScraperOrSpam(req) {
     return true;
   }
 
-  // 3. Rate Limiting (Maks 10 request per IP per menit) - Lebih ketat
+  // 3. Rate Limiting (Maks 300 request per IP per menit)
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-  const record = rateLimits.get(ip) || { count: 0, startTime: serverTime };
+  const record = requestCounts.get(ip) || { count: 0, startTime: serverTime };
   
-  if (serverTime - record.startTime > 60000) { // Reset tiap menit
+  if (serverTime - record.startTime > RATE_LIMIT_WINDOW) { // Reset tiap menit
     record.count = 1;
     record.startTime = serverTime;
   } else {
     record.count++;
   }
-  rateLimits.set(ip, record);
+  requestCounts.set(ip, record);
 
-  if (record.count > 10) {
+  if (record.count > MAX_REQUESTS_PER_MINUTE) {
     console.log(`[SECURITY] Blocked IP ${ip} - Rate Limit Exceeded`);
     return true; 
   }
