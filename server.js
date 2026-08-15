@@ -61,23 +61,23 @@ function adaptResponse(res) {
 }
 
 // --- SUPER DUPER ANTI-SCRAPING & RATE LIMITING ---
-const rateLimits = new Map();
+const requestCounts = new Map();
+const RATE_LIMIT_WINDOW = 60000;
+const MAX_REQUESTS_PER_MINUTE = 300; // Increased to 300 to allow /api/catcher polling (24 req/min) + user actions
 
 function isScraperOrSpam(req) {
-  // 1. Cek User-Agent (Anti-bot dasar)
   const ua = req.headers['user-agent'] || '';
   if (!ua || ua.includes('curl') || ua.includes('python') || ua.includes('postman') || ua.toLowerCase().includes('bot') || ua.includes('wget')) {
     return true;
   }
-
-  // 2. Cek Custom Header (Dynamic Time-based Signature)
+  
   const reqTime = parseInt(req.headers['x-am-time'] || '0', 10);
   const signature = req.headers['x-am-pro-signature'] || '';
-  
-  // Waktu request tidak boleh lebih dari 60 detik (mencegah replay attack)
   const serverTime = Date.now();
-  if (Math.abs(serverTime - reqTime) > 60000) {
-    console.log(`[SECURITY] Blocked Request - Time Expired/Invalid`);
+  
+  // Allow 5 minutes (300000ms) skew for users with incorrect PC clocks
+  if (Math.abs(serverTime - reqTime) > 300000) {
+    console.log('[SECURITY] Blocked Request - Time Expired/Invalid');
     return true;
   }
 
