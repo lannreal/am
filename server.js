@@ -138,17 +138,17 @@ const server = http.createServer(async (req, res) => {
     return handleManual(req, adaptResponse(res));
   }
 
-  // 4. Static Files (public/)
-  let filePath = path.join(__dirname, 'public', pathname === '/' ? 'index.html' : pathname);
+  // 4. Static Files
+  let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
 
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
-      // Fallback to public/index.html (SPA routing)
-      filePath = path.join(__dirname, 'public', 'index.html');
+      // Fallback to index.html (SPA routing)
+      filePath = path.join(__dirname, 'index.html');
     }
 
-    const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+    const extname = String(path.extname(filePath)).toLowerCase();
+    const contentType = MIME_TYPES[extname] || 'application/octet-stream';
 
     fs.readFile(filePath, (readErr, content) => {
       if (readErr) {
