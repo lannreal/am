@@ -482,7 +482,7 @@
     }
     .copyright span { color: var(--spotify-green); font-weight: 700; }
   </style>
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback&render=explicit" async defer></script>
 </head>
 <body>
   <!-- Cloudflare Turnstile Invisible Widget -->
@@ -781,7 +781,15 @@
             tsToken = null;
             return t;
         }
+        
+        let waitCount = 0;
+        while (tsWidgetId === null && waitCount < 50) {
+            await new Promise(r => setTimeout(r, 100));
+            waitCount++;
+        }
+        
         if (tsWidgetId === null) return "";
+        
         return new Promise((resolve) => {
             tsTokenResolve = resolve;
             turnstile.reset(tsWidgetId); 
