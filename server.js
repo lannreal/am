@@ -139,12 +139,12 @@ const server = http.createServer(async (req, res) => {
   }
 
   // 4. Static Files
-  let filePath = path.join(__dirname, 'public', pathname === '/' ? 'index.html' : pathname);
+  let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
 
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
       // Fallback to index.html (SPA routing)
-      filePath = path.join(__dirname, 'public', 'index.html');
+      filePath = path.join(__dirname, 'index.html');
     }
 
     const extname = String(path.extname(filePath)).toLowerCase();
