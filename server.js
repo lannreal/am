@@ -162,24 +162,26 @@ const server = http.createServer(async (req, res) => {
   }
 
   // 4. Static Files
-  let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
+  // CEGAH KEBOCORAN SOURCE CODE: Hanya izinkan index.html (karena tidak ada aset eksternal)
+  if (pathname !== '/' && pathname !== '/index.html') {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    return res.end('403 Forbidden: Access to this file is blocked for security reasons.');
+  }
+
+  let filePath = path.join(__dirname, 'index.html');
 
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
-      // Fallback to index.html (SPA routing)
-      filePath = path.join(__dirname, 'index.html');
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      return res.end('404 Not Found');
     }
-
-    const extname = String(path.extname(filePath)).toLowerCase();
-    const contentType = MIME_TYPES[extname] || 'application/octet-stream';
 
     fs.readFile(filePath, (readErr, content) => {
       if (readErr) {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('404 Not Found');
-        return;
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        return res.end('500 Internal Server Error');
       }
-      res.writeHead(200, { 'Content-Type': contentType });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=UTF-8' });
       res.end(content);
     });
   });
