@@ -59,24 +59,79 @@ export default async function handler(req, res) {
 
     if (action === "send") {
       if (!email) return res.status(400).json({ status: false, error: "Email wajib diisi" });
-      const resp = await fetch(`${BACKEND_BASE}/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
-      });
-      const data = await resp.json();
-      return res.status(resp.ok && data.status !== false ? 200 : 400).json(data);
+      
+      let respOk = false;
+      let finalData = {};
+      
+      try {
+        const resp = await fetch(`${BACKEND_BASE}/send`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        });
+        const data = await resp.json();
+        
+        if (resp.ok && data.status !== false) {
+          respOk = true;
+          finalData = data;
+        } else {
+          throw new Error("Primary API returned error");
+        }
+      } catch (err) {
+        console.log("[FALLBACK] Using fallback API for send due to:", err.message);
+        const fbUrl = `https://api.alwayscodex.my.id/api/am/send?email=${encodeURIComponent(email)}&apikey=mye`;
+        const fbResp = await fetch(fbUrl);
+        const fbData = await fbResp.json();
+        
+        respOk = fbData.success;
+        finalData = {
+          status: fbData.success,
+          message: fbData.message || fbData.error,
+          error: fbData.error,
+          source: "fallback"
+        };
+      }
+      
+      return res.status(respOk ? 200 : 400).json(finalData);
     } 
     
     else if (action === "verif") {
       if (!email || !url) return res.status(400).json({ status: false, error: "Email dan Link URL wajib diisi" });
-      const resp = await fetch(`${BACKEND_BASE}/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, link: url })
-      });
-      const data = await resp.json();
-      return res.status(resp.ok && data.status !== false ? 200 : 400).json(data);
+      
+      let respOk = false;
+      let finalData = {};
+      
+      try {
+        const resp = await fetch(`${BACKEND_BASE}/verify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, link: url })
+        });
+        const data = await resp.json();
+        
+        if (resp.ok && data.status !== false) {
+          respOk = true;
+          finalData = data;
+        } else {
+          throw new Error("Primary API returned error");
+        }
+      } catch (err) {
+        console.log("[FALLBACK] Using fallback API for verif due to:", err.message);
+        const fbUrl = `https://api.alwayscodex.my.id/api/am/verify?email=${encodeURIComponent(email)}&link=${encodeURIComponent(url)}&apikey=mye`;
+        const fbResp = await fetch(fbUrl);
+        const fbData = await fbResp.json();
+        
+        respOk = fbData.success;
+        finalData = {
+          status: fbData.success,
+          message: fbData.message || fbData.error,
+          error: fbData.error,
+          result: fbData.success ? { type: 'success' } : null,
+          source: "fallback"
+        };
+      }
+      
+      return res.status(respOk ? 200 : 400).json(finalData);
     }
 
     else {
