@@ -27,34 +27,77 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Generate Akun Pro via ThanzV2 Bulk Engine
-    const bulkRes = await fetch(`${BACKEND_BASE}/bulk`, {
+    // 1. Generate Custom ZNext Email Address
+    const randStr = Math.random().toString(36).substring(2, 8);
+    const email = `pro_${Date.now().toString(36)}_${randStr}@znext.bond`;
+
+    // 2. Kirim Magic Link via ThanzV2
+    const sendRes = await fetch(`${BACKEND_BASE}/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: 1 })
+      body: JSON.stringify({ email })
     });
+    const sendData = await sendRes.json();
 
-    const bulkData = await bulkRes.json();
+    if (!sendRes.ok || sendData.status === false) {
+      return res.status(500).json({ 
+        status: false, 
+        error: sendData.message || "Gagal mengirim link ke server Alight Motion" 
+      });
+    }
 
-    if (bulkRes.ok && bulkData.status && bulkData.result && bulkData.result.accounts && bulkData.result.accounts.length > 0) {
-      const acc = bulkData.result.accounts[0];
+    // 3. Polling Inbox via ThanzV2 API
+    let loginUrl = null;
+    for (let i = 0; i < 10; i++) {
+      await new Promise(r => setTimeout(r, 1800));
+      try {
+        const inboxRes = await fetch(`${BACKEND_BASE}/inbox`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        });
+        const inboxData = await inboxRes.json();
+        if (inboxData.status && inboxData.data && Array.isArray(inboxData.data.messages) && inboxData.data.messages.length > 0) {
+          const found = inboxData.data.messages.find(m => m.login_url);
+          if (found && found.login_url) {
+            loginUrl = found.login_url;
+            break;
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!loginUrl) {
+      return res.status(408).json({ status: false, error: "Timeout: Link verifikasi belum masuk ke inbox" });
+    }
+
+    // 4. Verifikasi & Aktivasi Lisensi Pro 1 Year
+    const verifRes = await fetch(`${BACKEND_BASE}/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, link: loginUrl })
+    });
+    const verifData = await verifRes.json();
+
+    if (verifRes.ok && verifData.status !== false) {
       return res.status(200).json({
         status: true,
-        message: "Akun Pro Berhasil Dibuat & Aktif",
+        message: "Akun Pro Berhasil Dibuat & Aktif (1 Year)",
         account: {
-          email: acc.email,
-          package: acc.package || "PRO_1_YEAR",
-          duration: acc.duration || "1_year",
-          sid: acc.email, // gunakan email sebagai identifier
+          email: email,
+          package: "PRO_1_YEAR",
+          duration: "1_year",
+          sid: email,
           created_at: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
         }
       });
     } else {
-      return res.status(500).json({ 
-        status: false, 
-        error: bulkData.message || (bulkData.error && bulkData.error.message) || "Gagal membuat akun dari server pusat" 
+      return res.status(500).json({
+        status: false,
+        error: verifData.message || "Gagal mengaktivasi lisensi Pro"
       });
     }
+
   } catch (err) {
     return res.status(500).json({ status: false, error: err.message || "Internal server error" });
   }
