@@ -106,6 +106,16 @@ const server = http.createServer(async (req, res) => {
     return res.end(JSON.stringify({ status: 'ok', uptime: process.uptime() }));
   }
 
+  // --- CORS OPTIONS PREFLIGHT ---
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, x-am-pro-signature'
+    });
+    return res.end();
+  }
+
   // --- API SECURITY CHECK ---
   if (pathname.startsWith('/api/')) {
     if (isScraperOrSpam(req)) {

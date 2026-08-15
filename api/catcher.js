@@ -31,6 +31,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ status: false, error: "Session ID atau Email wajib disertakan" });
     }
 
+    const ignoreSet = new Set(ignoreIds);
+
     // 1. Cek Inbox via ThanzV2 jika sid berupa email
     if (sid.includes('@')) {
       try {
@@ -40,16 +42,39 @@ export default async function handler(req, res) {
           body: JSON.stringify({ email: sid })
         });
         const inboxData = await inboxRes.json();
-        if (inboxData.status && inboxData.data && inboxData.data.messages && inboxData.data.messages.length > 0) {
-          const lastMsg = inboxData.data.messages[inboxData.data.messages.length - 1];
-          if (lastMsg.login_url) {
+        
+        if (inboxData.status && inboxData.data && Array.isArray(inboxData.data.messages)) {
+          const messages = inboxData.data.messages;
+          const currentIds = messages.map((m, idx) => m.login_url || `msg-${idx}`);
+
+          // Jika ignoreIds kosong (initial call), simpan ID yang ada & jangan langsung return found
+          if (ignoreIds.length === 0) {
             return res.status(200).json({
               status: true,
-              found: true,
-              link: lastMsg.login_url,
-              mail_id: lastMsg.subject || "inbox-1"
+              found: false,
+              currentIds: currentIds
             });
           }
+
+          // Cari pesan BARU yang login_url nya belum pernah ada di ignoreSet
+          for (let i = messages.length - 1; i >= 0; i--) {
+            const m = messages[i];
+            const mId = m.login_url || `msg-${i}`;
+            if (m.login_url && !ignoreSet.has(m.login_url) && !ignoreSet.has(mId)) {
+              return res.status(200).json({
+                status: true,
+                found: true,
+                link: m.login_url,
+                mail_id: mId
+              });
+            }
+          }
+
+          return res.status(200).json({
+            status: true,
+            found: false,
+            currentIds: currentIds
+          });
         }
       } catch (e) {}
     }
@@ -58,8 +83,15 @@ export default async function handler(req, res) {
     const checkRes = await fetch(`${GUERRILLA_BASE}?f=check_email&seq=0&sid_token=${sid}`);
     const checkData = await checkRes.json();
     const list = checkData.list || [];
+    const currentIds = list.map(m => m.mail_id);
 
-    const ignoreSet = new Set(ignoreIds);
+    if (ignoreIds.length === 0) {
+      return res.status(200).json({
+        status: true,
+        found: false,
+        currentIds: currentIds
+      });
+    }
 
     for (const m of list) {
       if (!ignoreSet.has(m.mail_id) && m.mail_from !== "no-reply@guerrillamail.com") {
@@ -83,8 +115,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Jika belum ada email baru masuk
-    const currentIds = list.map(m => m.mail_id);
     return res.status(200).json({
       status: true,
       found: false,

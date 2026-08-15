@@ -1014,7 +1014,7 @@
           <div class="vault-item-icon" style="width:40px; height:40px; font-size:16px;"><i class="fa-solid fa-bolt"></i></div>
           <div class="vault-item-info">
             <span class="vault-item-title">${acc.email.split('@')[0]}</span>
-            <span class="vault-item-desc">Pro • ${acc.created_at || 'Just now'}</span>
+            <span class="vault-item-desc">1-Year Pro • ${acc.created_at || 'Just now'}</span>
           </div>
         `;
         sideItem.onclick = () => { navigator.clipboard.writeText(acc.email); showToast("Email copied to clipboard"); };
@@ -1023,9 +1023,9 @@
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-          <div class="card-img"><i class="fa-solid fa-bolt"></i></div>
+          <div class="card-img"><i class="fa-solid fa-crown" style="color:var(--spotify-green);"></i></div>
           <div class="card-title">${acc.email.split('@')[0]}</div>
-          <div class="card-desc">Pro Account • ${acc.created_at || 'Just now'}</div>
+          <div class="card-desc">1-Year Pro • ${acc.created_at || 'Just now'}</div>
           <button class="card-action" onclick="event.stopPropagation(); removeAccount('${acc.email}')" title="Delete"><i class="fa-solid fa-trash" style="font-size:16px;"></i></button>
         `;
         card.onclick = () => { navigator.clipboard.writeText(acc.email); showToast("Email copied to clipboard"); };
@@ -1036,12 +1036,12 @@
     function exportAccounts() {
       const vault = getVault();
       if (!vault.length) return showToast('Vault is empty');
-      let content = "=== AmPremGenerator ACCOUNTS ===\n\n";
-      vault.forEach((a, i) => { content += `[${i+1}] EMAIL: ${a.email}\n    TIME: ${a.created_at || '-'}\n\n`; });
+      let content = "=== AmPremGenerator ACCOUNTS (1-YEAR PRO) ===\n\n";
+      vault.forEach((a, i) => { content += `[${i+1}] EMAIL: ${a.email}\n    TYPE: 1-Year Pro Account\n    TIME: ${a.created_at || '-'}\n\n`; });
       const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
       const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
-      link.download = `am_accounts_${Date.now()}.txt`; link.click();
-      showToast('Export downloaded successfully');
+      link.download = `AmPrem_Accounts_${Date.now()}.txt`; link.click();
+      showToast('Vault exported to TXT');
     }
 
     /* ==========================================================
@@ -1058,7 +1058,7 @@
         const res = await fetch('/api/manual', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-am-pro-signature': 'vault-v3' }, body: JSON.stringify({ action: 'send', email: email }) });
         const data = await res.json();
         if (res.ok && data.status) showToast('Magic link sent! Check your inbox.');
-        else showToast(data.error || 'Failed to send link');
+        else showToast(data.message || data.error || 'Failed to send link');
       } catch (e) { showToast('Server connection failed'); } 
       finally { btn.disabled = false; btn.textContent = `Send Magic Link`; }
     }
@@ -1074,11 +1074,11 @@
       try {
         const res = await fetch('/api/manual', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-am-pro-signature': 'vault-v3' }, body: JSON.stringify({ action: 'verif', email: email, url: link }) });
         const data = await res.json();
-        if (res.ok && data.status) {
-          showToast('Account activated to Pro!');
-          addToVault({ email: email, created_at: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) });
+        if (res.ok && (data.status === true || (data.result && data.result.type === 'success'))) {
+          showToast('Account activated to 1-Year Pro!');
+          addToVault({ email: email, package: 'PRO_1_YEAR', created_at: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) });
           document.getElementById('manualUrlInput').value = '';
-        } else showToast(data.error || 'Verification failed');
+        } else showToast(data.message || data.error || 'Verification failed');
       } catch (e) { showToast('Server connection failed'); } 
       finally { btn.disabled = false; btn.textContent = `Activate License`; }
     }
