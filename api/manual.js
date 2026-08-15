@@ -23,9 +23,28 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Access Denied: Invalid Signature' });
   }
 
+  // --- CLOUDFLARE TURNSTILE VERIFICATION ---
+  const turnstileToken = req.headers['x-cf-turnstile-response'];
+  if (!turnstileToken) {
+    return res.status(403).json({ error: 'Access Denied: Turnstile token missing' });
+  }
+  
+  const tsFormData = new URLSearchParams();
+  tsFormData.append('secret', '0x4AAAAAAEQqc7ccVMVc5i4rWuuWs1QHG_M');
+  tsFormData.append('response', turnstileToken);
+  
+  const tsRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST',
+    body: tsFormData
+  });
+  const tsData = await tsRes.json();
+  if (!tsData.success) {
+    return res.status(403).json({ error: 'Access Denied: CAPTCHA validation failed' });
+  }
+
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-am-pro-signature, x-am-time");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-am-pro-signature, x-am-time, x-cf-turnstile-response");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();

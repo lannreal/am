@@ -482,8 +482,11 @@
     }
     .copyright span { color: var(--spotify-green); font-weight: 700; }
   </style>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 </head>
 <body>
+  <!-- Cloudflare Turnstile Invisible Widget -->
+  <div id="cf-turnstile" style="display: none;"></div>
 
   <!-- Welcome Popup -->
   <div id="welcomePopup" class="popup-overlay">
@@ -753,7 +756,46 @@
       return btoa(Math.random().toString() + navigator.userAgent).substring(0, 32);
     }
 
-    async function secureFetch(url, bodyData) {
+    // --- CLOUDFLARE TURNSTILE INTEGRATION ---
+    let tsToken = null;
+    let tsWidgetId = null;
+    let tsTokenResolve = null;
+
+    window.onloadTurnstileCallback = function () {
+      tsWidgetId = turnstile.render('#cf-turnstile', {
+          sitekey: '0x4AAAAAAEQqc_cjEhWZYYTu',
+          callback: function(token) {
+              if (tsTokenResolve) {
+                  tsTokenResolve(token);
+                  tsTokenResolve = null;
+              } else {
+                  tsToken = token;
+              }
+          }
+      });
+    };
+
+    async function getFreshTurnstileToken() {
+        if (tsToken) {
+            const t = tsToken;
+            tsToken = null;
+            return t;
+        }
+        if (tsWidgetId === null) return "";
+        return new Promise((resolve) => {
+            tsTokenResolve = resolve;
+            turnstile.reset(tsWidgetId); 
+        });
+    }
+
+    async function secureFetch(url, bodyData, useTurnstile = false) {
+      let turnstileToken = "";
+      if (useTurnstile) {
+         try {
+           turnstileToken = await getFreshTurnstileToken();
+         } catch (e) { console.error("Turnstile error:", e); }
+      }
+
       let t = Date.now();
       // Obfuscated anti-headless check
       if (window['\x6e\x61\x76\x69\x67\x61\x74\x6f\x72']['\x77\x65\x62\x64\x72\x69\x76\x65\x72'] || window['\x64\x6f\x63\x75\x6d\x65\x6e\x74']['\x64\x6f\x63\x75\x6d\x65\x6e\x74\x45\x6c\x65\x6d\x65\x6e\x74']['\x67\x65\x74\x41\x74\x74\x72\x69\x62\x75\x74\x65']('\x77\x65\x62\x64\x72\x69\x76\x65\x72')) {
@@ -765,7 +807,8 @@
           'Content-Type': 'application/json', 
           'x-am-auth-token': _generateFakePayload(), // HONEYPOT (ignored by server)
           'x-am-pro-signature': _x0a2(t),
-          'x-am-time': t.toString()
+          'x-am-time': t.toString(),
+          'x-cf-turnstile-response': turnstileToken
         },
         body: JSON.stringify(bodyData)
       });
@@ -919,7 +962,7 @@
         logTerm('info', `--- Processing Account #${i}/${count} ---`);
 
         try {
-          const resp = await secureFetch('/api/generate', {});
+          const resp = await secureFetch('/api/generate', {}, true);
           updateStepUI(1, 'done'); updateStepUI(2, 'active'); updateStepUI(3, 'active');
 
           const data = await resp.json();
@@ -1082,7 +1125,7 @@
       btn.disabled = true; btn.textContent = `Sending...`;
 
       try {
-        const res = await secureFetch('/api/manual', { action: 'send', email: email });
+        const res = await secureFetch('/api/manual', { action: 'send', email: email }, true);
         const data = await res.json();
         if (res.ok && data.status) showToast('Magic link sent! Check your inbox.');
         else showToast(data.message || data.error || 'Failed to send link');
@@ -1099,7 +1142,7 @@
       btn.disabled = true; btn.textContent = `Verifying...`;
 
       try {
-        const res = await secureFetch('/api/manual', { action: 'verif', email: email, url: link });
+        const res = await secureFetch('/api/manual', { action: 'verif', email: email, url: link }, true);
         const data = await res.json();
         if (res.ok && (data.status === true || (data.result && data.result.type === 'success'))) {
           showToast('Account activated to 1-Year Pro!');

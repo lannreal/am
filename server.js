@@ -124,7 +124,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, x-am-pro-signature, x-am-time'
+      'Access-Control-Allow-Headers': 'Content-Type, x-am-pro-signature, x-am-time, x-cf-turnstile-response'
     });
     return res.end();
   }
