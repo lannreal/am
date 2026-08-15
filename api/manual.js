@@ -6,16 +6,26 @@ const BACKEND_BASE = process.env.AM_BACKEND_URL || "https://secret-member-thanzv
 export default async function handler(req, res) {
   // --- VERCEL SECURITY (ANTI-SCRAPING) ---
   const ua = req.headers['user-agent'] || '';
-  if (!ua || ua.includes('curl') || ua.includes('python') || ua.includes('postman') || ua.toLowerCase().includes('bot')) {
+  if (!ua || ua.includes('curl') || ua.includes('python') || ua.includes('postman') || ua.toLowerCase().includes('bot') || ua.includes('wget')) {
     return res.status(403).json({ error: 'Access Denied: Anti-Scraping Active' });
   }
-  if (req.headers['x-am-pro-signature'] !== 'vault-v3') {
+
+  const reqTime = parseInt(req.headers['x-am-time'] || '0', 10);
+  const signature = req.headers['x-am-pro-signature'] || '';
+  const serverTime = Date.now();
+  
+  if (Math.abs(serverTime - reqTime) > 60000) {
+    return res.status(403).json({ error: 'Access Denied: Time Expired/Invalid' });
+  }
+
+  const expectedSig = Buffer.from(reqTime + "_am_super_secure_vault_2026").toString('base64').split("").reverse().join("");
+  if (signature !== expectedSig) {
     return res.status(403).json({ error: 'Access Denied: Invalid Signature' });
   }
 
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-am-pro-signature");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-am-pro-signature, x-am-time");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();

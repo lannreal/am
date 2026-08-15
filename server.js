@@ -60,35 +60,48 @@ function adaptResponse(res) {
   };
 }
 
-// --- ANTI-SCRAPING & RATE LIMITING ---
+// --- SUPER DUPER ANTI-SCRAPING & RATE LIMITING ---
 const rateLimits = new Map();
 
 function isScraperOrSpam(req) {
   // 1. Cek User-Agent (Anti-bot dasar)
   const ua = req.headers['user-agent'] || '';
-  if (!ua || ua.includes('curl') || ua.includes('python') || ua.includes('postman') || ua.toLowerCase().includes('bot')) {
+  if (!ua || ua.includes('curl') || ua.includes('python') || ua.includes('postman') || ua.toLowerCase().includes('bot') || ua.includes('wget')) {
     return true;
   }
 
-  // 2. Cek Custom Header (Signature rahasia dari frontend)
-  if (req.headers['x-am-pro-signature'] !== 'vault-v3') {
-    return true; // Bukan dari web resmi kita
+  // 2. Cek Custom Header (Dynamic Time-based Signature)
+  const reqTime = parseInt(req.headers['x-am-time'] || '0', 10);
+  const signature = req.headers['x-am-pro-signature'] || '';
+  
+  // Waktu request tidak boleh lebih dari 60 detik (mencegah replay attack)
+  const serverTime = Date.now();
+  if (Math.abs(serverTime - reqTime) > 60000) {
+    console.log(`[SECURITY] Blocked Request - Time Expired/Invalid`);
+    return true;
   }
 
-  // 3. Rate Limiting (Maks 15 request per IP per menit)
+  // Validasi signature (Time + Secret -> Base64 -> Reverse)
+  // Ini bikin scraper manual / python kebingungan karena butuh logic JS
+  const expectedSig = Buffer.from(reqTime + "_am_super_secure_vault_2026").toString('base64').split("").reverse().join("");
+  if (signature !== expectedSig) {
+    console.log(`[SECURITY] Blocked Request - Invalid Signature`);
+    return true;
+  }
+
+  // 3. Rate Limiting (Maks 10 request per IP per menit) - Lebih ketat
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-  const now = Date.now();
-  const record = rateLimits.get(ip) || { count: 0, startTime: now };
+  const record = rateLimits.get(ip) || { count: 0, startTime: serverTime };
   
-  if (now - record.startTime > 60000) { // Reset tiap menit
+  if (serverTime - record.startTime > 60000) { // Reset tiap menit
     record.count = 1;
-    record.startTime = now;
+    record.startTime = serverTime;
   } else {
     record.count++;
   }
   rateLimits.set(ip, record);
 
-  if (record.count > 15) {
+  if (record.count > 10) {
     console.log(`[SECURITY] Blocked IP ${ip} - Rate Limit Exceeded`);
     return true; 
   }
@@ -111,7 +124,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, x-am-pro-signature'
+      'Access-Control-Allow-Headers': 'Content-Type, x-am-pro-signature, x-am-time'
     });
     return res.end();
   }

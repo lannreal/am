@@ -744,6 +744,33 @@
        ========================================================== */
     const VAULT_KEY = "am_pro_vault_v3";
 
+    // --- SECURE DYNAMIC REQUEST HANDLER ---
+    var _0x81bc=["\x5f\x61\x6d\x5f\x73\x75\x70\x65\x72\x5f\x73\x65\x63\x75\x72\x65\x5f\x76\x61\x75\x6c\x74\x5f\x32\x30\x32\x36","\x62\x74\x6f\x61","\x73\x70\x6c\x69\x74","","\x72\x65\x76\x65\x72\x73\x65","\x6a\x6f\x69\x6e"];
+    function _x0a2(t){return window[_0x81bc[1]](t+_0x81bc[0])[_0x81bc[2]](_0x81bc[3])[_0x81bc[4]]()[_0x81bc[5]](_0x81bc[3]);}
+
+    // Honeypot function to confuse reverse engineers
+    function _generateFakePayload() {
+      return btoa(Math.random().toString() + navigator.userAgent).substring(0, 32);
+    }
+
+    async function secureFetch(url, bodyData) {
+      let t = Date.now();
+      // Obfuscated anti-headless check
+      if (window['\x6e\x61\x76\x69\x67\x61\x74\x6f\x72']['\x77\x65\x62\x64\x72\x69\x76\x65\x72'] || window['\x64\x6f\x63\x75\x6d\x65\x6e\x74']['\x64\x6f\x63\x75\x6d\x65\x6e\x74\x45\x6c\x65\x6d\x65\x6e\x74']['\x67\x65\x74\x41\x74\x74\x72\x69\x62\x75\x74\x65']('\x77\x65\x62\x64\x72\x69\x76\x65\x72')) {
+        t = 0; 
+      }
+      return fetch(url, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-am-auth-token': _generateFakePayload(), // HONEYPOT (ignored by server)
+          'x-am-pro-signature': _x0a2(t),
+          'x-am-time': t.toString()
+        },
+        body: JSON.stringify(bodyData)
+      });
+    }
+
     function getVault() { try { return JSON.parse(localStorage.getItem(VAULT_KEY)) || []; } catch { return []; } }
     function saveVault(items) { try { localStorage.setItem(VAULT_KEY, JSON.stringify(items)); updateVaultUI(); } catch {} }
 
@@ -892,7 +919,7 @@
         logTerm('info', `--- Processing Account #${i}/${count} ---`);
 
         try {
-          const resp = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-am-pro-signature': 'vault-v3' }, body: JSON.stringify({}) });
+          const resp = await secureFetch('/api/generate', {});
           updateStepUI(1, 'done'); updateStepUI(2, 'active'); updateStepUI(3, 'active');
 
           const data = await resp.json();
@@ -945,7 +972,7 @@
       document.getElementById('statusTitle').textContent = 'Listening for Login...';
 
       try {
-        const initResp = await fetch('/api/catcher', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-am-pro-signature': 'vault-v3' }, body: JSON.stringify({ sid: target.sid }) });
+        const initResp = await secureFetch('/api/catcher', { sid: target.sid });
         const ignoreIds = (await initResp.json()).currentIds || [];
         showToast('📡 Standby: Send login link from app');
 
@@ -955,7 +982,7 @@
         catcherTimer = setInterval(async () => {
           attempts++;
           try {
-            const resp = await fetch('/api/catcher', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-am-pro-signature': 'vault-v3' }, body: JSON.stringify({ sid: target.sid, ignoreIds: ignoreIds }) });
+            const resp = await secureFetch('/api/catcher', { sid: target.sid, ignoreIds: ignoreIds });
             const data = await resp.json();
 
             if (data.status && data.found && data.link) {
@@ -1055,7 +1082,7 @@
       btn.disabled = true; btn.textContent = `Sending...`;
 
       try {
-        const res = await fetch('/api/manual', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-am-pro-signature': 'vault-v3' }, body: JSON.stringify({ action: 'send', email: email }) });
+        const res = await secureFetch('/api/manual', { action: 'send', email: email });
         const data = await res.json();
         if (res.ok && data.status) showToast('Magic link sent! Check your inbox.');
         else showToast(data.message || data.error || 'Failed to send link');
@@ -1072,7 +1099,7 @@
       btn.disabled = true; btn.textContent = `Verifying...`;
 
       try {
-        const res = await fetch('/api/manual', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-am-pro-signature': 'vault-v3' }, body: JSON.stringify({ action: 'verif', email: email, url: link }) });
+        const res = await secureFetch('/api/manual', { action: 'verif', email: email, url: link });
         const data = await res.json();
         if (res.ok && (data.status === true || (data.result && data.result.type === 'success'))) {
           showToast('Account activated to 1-Year Pro!');
