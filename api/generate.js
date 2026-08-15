@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const signature = req.headers['x-am-pro-signature'] || '';
   const serverTime = Date.now();
   
-  if (Math.abs(serverTime - reqTime) > 60000) {
+  if (Math.abs(serverTime - reqTime) > 300000) {
     return res.status(403).json({ error: 'Access Denied: Time Expired/Invalid' });
   }
 
